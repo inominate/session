@@ -38,5 +38,5 @@ func Test_MySQLStore(t *testing.T) {
 	memTest := SessionTestServer{t, sm}
 	go http.ListenAndServe(listen, memTest)
 
-	session_test(t)
+	sessionTest(t)
 }

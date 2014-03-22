@@ -97,7 +97,7 @@ func getSesID(t *testing.T, jar http.CookieJar) string {
 	return ""
 }
 
-func session_test(t *testing.T) {
+func sessionTest(t *testing.T) {
 	jar, err := cookiejar.New(nil)
 	if err != nil {
 		t.Errorf("failed to create cookiejar: %s", err)

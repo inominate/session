@@ -16,24 +16,24 @@ MemoryStore is a session storage that operates entirely in memory suitable
 for testing and small scale uses.
 */
 type MemoryStore struct {
-	commitQueue chan request
-	deleteQueue chan request
-	gcQueue     chan request
-	getQueue    chan request
+	commitQueue chan memReq
+	deleteQueue chan memReq
+	gcQueue     chan memReq
+	getQueue    chan memReq
 
-	closeChan chan request
+	closeChan chan memReq
 
 	store map[string]storedSession
 
 	maxAge time.Duration
 }
 
-type request struct {
+type memReq struct {
 	sid     string
 	session *Session
 	err     error
 
-	respChan chan request
+	respChan chan memReq
 }
 
 /*
@@ -45,11 +45,11 @@ func NewMemoryStore(maxAge time.Duration) (*MemoryStore, error) {
 		return nil, errors.New("maxAge duration too short")
 	}
 
-	s.getQueue = make(chan request, 10)
-	s.commitQueue = make(chan request, 10)
-	s.gcQueue = make(chan request)
-	s.deleteQueue = make(chan request, 10)
-	s.closeChan = make(chan request)
+	s.getQueue = make(chan memReq, 10)
+	s.commitQueue = make(chan memReq, 10)
+	s.gcQueue = make(chan memReq)
+	s.deleteQueue = make(chan memReq, 10)
+	s.closeChan = make(chan memReq)
 
 	s.store = make(map[string]storedSession)
 
@@ -63,8 +63,8 @@ func NewMemoryStore(maxAge time.Duration) (*MemoryStore, error) {
 
 // Close the MemoryStore
 func (s *MemoryStore) Close() error {
-	respChan := make(chan request)
-	req := request{respChan: respChan}
+	respChan := make(chan memReq)
+	req := memReq{respChan: respChan}
 
 	s.closeChan <- req
 	resp := <-respChan
@@ -75,8 +75,8 @@ func (s *MemoryStore) Close() error {
 
 // GC one pass over the MemoryStore
 func (s *MemoryStore) GC() error {
-	respChan := make(chan request)
-	req := request{respChan: respChan}
+	respChan := make(chan memReq)
+	req := memReq{respChan: respChan}
 
 	s.gcQueue <- req
 	resp := <-respChan
@@ -87,8 +87,8 @@ func (s *MemoryStore) GC() error {
 
 // Get session associated with sid.
 func (s *MemoryStore) Get(sid string) (*Session, error) {
-	respChan := make(chan request)
-	req := request{sid: sid, respChan: respChan}
+	respChan := make(chan memReq)
+	req := memReq{sid: sid, respChan: respChan}
 
 	s.getQueue <- req
 	resp := <-respChan
@@ -99,8 +99,8 @@ func (s *MemoryStore) Get(sid string) (*Session, error) {
 
 // Commit session back to storage.
 func (s *MemoryStore) Commit(ses *Session) error {
-	respChan := make(chan request)
-	req := request{session: ses, respChan: respChan}
+	respChan := make(chan memReq)
+	req := memReq{session: ses, respChan: respChan}
 
 	s.commitQueue <- req
 	resp := <-respChan
@@ -111,8 +111,8 @@ func (s *MemoryStore) Commit(ses *Session) error {
 
 // Delete session from storage.
 func (s *MemoryStore) Delete(ses *Session) error {
-	respChan := make(chan request)
-	req := request{session: ses, respChan: respChan}
+	respChan := make(chan memReq)
+	req := memReq{session: ses, respChan: respChan}
 
 	s.deleteQueue <- req
 	resp := <-respChan

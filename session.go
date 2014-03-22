@@ -15,24 +15,6 @@ import (
 )
 
 /*
-SessionManager type, use NewSessionManager() to create.
-*/
-type SessionManager struct {
-	// Set true to require Secure cookies
-	Secure bool
-
-	gcDelay   time.Duration
-	closeChan chan bool
-
-	cookieName string
-
-	storage SessionStorage
-	sync.RWMutex
-
-	closed bool
-}
-
-/*
 SessionStorage interface is used and required by SessionManager.
 
 Sessions passed as parameters can be used concurrently. All methods except
@@ -85,11 +67,31 @@ type Session struct {
 	cookieName string
 	secure     bool
 
-	storage SessionStorage
+	sm *SessionManager
 	sync.RWMutex
 
 	// Available for external use at your own risk.
 	Values map[string]string
+}
+
+/*
+SessionManager type, use NewSessionManager() to create.
+*/
+type SessionManager struct {
+	// Set true to require Secure cookies
+	Secure bool
+
+	gcDelay   time.Duration
+	closeChan chan bool
+
+	cookieName string
+
+	storage SessionStorage
+	sync.RWMutex
+
+	closed bool
+
+	activeSessions map[string]chan bool
 }
 
 /*
@@ -111,6 +113,7 @@ func NewSessionManager(storage SessionStorage, cookieName string) (*SessionManag
 	sm.storage = storage
 	sm.closeChan = make(chan bool)
 
+	sm.activeSessions = make(map[string]chan bool)
 	go sm.gc()
 
 	return &sm, nil
@@ -195,10 +198,11 @@ possible and creating a	new session if necessary.
 */
 func (sm *SessionManager) Begin(w http.ResponseWriter, req *http.Request) (*Session, error) {
 	var s Session
-
 	sidCookie, err := req.Cookie(sm.cookieName)
 	if err == nil && sidCookie.Value != "" {
 		s.sid = sidCookie.Value
+
+		sm.lockSID(s.sid)
 
 		stored, err := sm.storage.Get(s.sid)
 		if err != nil && err != ErrNotFound {
@@ -209,7 +213,7 @@ func (sm *SessionManager) Begin(w http.ResponseWriter, req *http.Request) (*Sess
 		}
 	}
 
-	s.storage = sm.storage
+	s.sm = sm
 	s.cookieName = sm.cookieName
 	s.secure = sm.Secure
 
@@ -222,6 +226,67 @@ func (sm *SessionManager) Begin(w http.ResponseWriter, req *http.Request) (*Sess
 		s.setCookie()
 	}
 	return &s, nil
+}
+
+func (sm *SessionManager) lockSID(sid string) {
+	// Ensure that each sid is only in use once at a time.
+	for {
+		sm.Lock()
+		ch, inUse := sm.activeSessions[sid]
+		if !inUse {
+			sm.activeSessions[sid] = make(chan bool)
+			sm.Unlock()
+			break
+		} else {
+			sm.Unlock()
+			// Wait for whoever is using it to finish.
+			<-ch
+		}
+	}
+}
+
+func (sm *SessionManager) unlockSID(sid string) {
+	// Free up our hold on this session id.
+	sm.Lock()
+	ch, inUse := sm.activeSessions[sid]
+	if inUse {
+		close(ch)
+		delete(sm.activeSessions, sid)
+	}
+	sm.Unlock()
+}
+
+/*
+Commit the session back to storage. MUST be called at the end of each request.
+*/
+func (s *Session) Commit() error {
+	s.Lock()
+	defer s.Unlock()
+
+	if s.sid != "" {
+		err := s.sm.storage.Commit(s)
+		s.sm.unlockSID(s.sid)
+		return err
+	}
+
+	return nil
+}
+
+/*
+Clear existing session data leaving a new one.
+*/
+func (s *Session) Clear() {
+	s.Lock()
+
+	s.sm.storage.Delete(s)
+	s.sm.unlockSID(s.sid)
+
+	s.sid = makeID()
+	s.Values = make(map[string]string)
+	s.Unlock()
+
+	s.setCookie()
+	s.NewActionToken()
 }
 
 /*
@@ -280,21 +345,6 @@ func (s *Session) Set(key string, value string) {
 	s.Values[key] = value
 }
 
-/*
-Commit the session back to storage. Should be called at the end of each
-request.
-*/
-func (s *Session) Commit() error {
-	s.Lock()
-	defer s.Unlock()
-
-	if s.sid != "" {
-		return s.storage.Commit(s)
-	}
-
-	return nil
-}
-
 func (s *Session) setCookie() {
 	var sessionCookie http.Cookie
 
@@ -308,22 +358,6 @@ func (s *Session) setCookie() {
 	}
 
 	http.SetCookie(s.w, &sessionCookie)
-}
-
-/*
-Clear existing session data leaving a new one.
-*/
-func (s *Session) Clear() {
-	s.Lock()
-
-	s.storage.Delete(s)
-
-	s.sid = makeID()
-	s.Values = make(map[string]string)
-	s.Unlock()
-
-	s.setCookie()
-	s.NewActionToken()
 }
 
 func makeID() string {

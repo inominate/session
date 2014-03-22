@@ -7,6 +7,7 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"testing"
+	"time"
 )
 
 type SessionTestServer struct {
@@ -54,6 +55,11 @@ func (m SessionTestServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	if req.FormValue("delay") != "" {
+		time.Sleep(time.Second)
+		w.Write([]byte(""))
+		return
+	}
 }
 
 const listen = "localhost:54987"
@@ -157,6 +163,32 @@ func sessionTest(t *testing.T) {
 		t.Errorf("failed Session ID unchanged after clearing, got '%s'.", sesID)
 	}
 	t.Logf("New session id: '%s'", sesID2)
+
+	// Test lockout of simultaneous sessions
+	begin := time.Now()
+	go func() {
+		req(t, c, "delay=true")
+		if time.Since(begin) < time.Second {
+			t.Errorf("delay handler failed to delay, took %.2f seconds.", time.Since(begin).Seconds())
+		}
+	}()
+	go func() {
+		req(t, c, "delay=true")
+		if time.Since(begin) < time.Second {
+			t.Errorf("delay handler failed to delay, took %.2f seconds.", time.Since(begin).Seconds())
+		}
+	}()
+
+	time.Sleep(100 * time.Millisecond)
+	str = req(t, c, "get=something")
+	if str != "NotFound" {
+		t.Errorf("failed get=something reported as '%s', expcted 'NotFound'", str)
+	}
+	if time.Since(begin) < time.Second {
+		t.Errorf("simultaneous session lockout failed to delay, took %.2f seconds.", time.Since(begin).Seconds())
+	} else {
+		t.Logf("simultaneous session lockout succeded, took %.2f seconds.", time.Since(begin).Seconds())
+	}
 
 	t.Logf("All tests completed.")
 }

@@ -80,12 +80,12 @@ func req(t *testing.T, c *http.Client, params string) string {
 }
 
 func getSesID(t *testing.T, jar http.CookieJar) string {
-	cookieUrl, err := url.Parse(fmt.Sprintf("http://%s/", listen))
+	cookieURL, err := url.Parse(fmt.Sprintf("http://%s/", listen))
 	if err != nil {
 		t.Errorf("Invalid cookieURL: %s", err)
 		return ""
 	}
-	cookies := jar.Cookies(cookieUrl)
+	cookies := jar.Cookies(cookieURL)
 	for _, cookie := range cookies {
 		if cookie.Name == "test_session" {
 			return cookie.Value

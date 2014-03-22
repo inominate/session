@@ -11,6 +11,10 @@ type storedSession struct {
 	values   map[string]string
 }
 
+/*
+MemoryStore is a session storage that operates entirely in memory suitable
+for testing and small scale uses.
+*/
 type MemoryStore struct {
 	commitQueue chan request
 	deleteQueue chan request
@@ -33,7 +37,7 @@ type request struct {
 }
 
 /*
-	Create a new session storage in memory.
+NewMemoryStore returns a MemoryStore SessionStorage.
 */
 func NewMemoryStore(maxAge time.Duration) (*MemoryStore, error) {
 	var s MemoryStore
@@ -57,6 +61,7 @@ func NewMemoryStore(maxAge time.Duration) (*MemoryStore, error) {
 
 /* Interface Functions */
 
+// Close the MemoryStore
 func (s *MemoryStore) Close() error {
 	respChan := make(chan request)
 	req := request{respChan: respChan}
@@ -68,6 +73,7 @@ func (s *MemoryStore) Close() error {
 	return resp.err
 }
 
+// GC one pass over the MemoryStore
 func (s *MemoryStore) GC() error {
 	respChan := make(chan request)
 	req := request{respChan: respChan}
@@ -79,6 +85,7 @@ func (s *MemoryStore) GC() error {
 	return resp.err
 }
 
+// Get session associated with sid.
 func (s *MemoryStore) Get(sid string) (*Session, error) {
 	respChan := make(chan request)
 	req := request{sid: sid, respChan: respChan}
@@ -90,6 +97,7 @@ func (s *MemoryStore) Get(sid string) (*Session, error) {
 	return resp.session, resp.err
 }
 
+// Commit session back to storage.
 func (s *MemoryStore) Commit(ses *Session) error {
 	respChan := make(chan request)
 	req := request{session: ses, respChan: respChan}
@@ -101,6 +109,7 @@ func (s *MemoryStore) Commit(ses *Session) error {
 	return resp.err
 }
 
+// Delete session from storage.
 func (s *MemoryStore) Delete(ses *Session) error {
 	respChan := make(chan request)
 	req := request{session: ses, respChan: respChan}
@@ -112,6 +121,7 @@ func (s *MemoryStore) Delete(ses *Session) error {
 	return resp.err
 }
 
+// serve acts as the main loop for handling storage operations.
 func (s *MemoryStore) serve() {
 	for {
 		select {

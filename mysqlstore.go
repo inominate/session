@@ -7,6 +7,9 @@ import (
 	"time"
 )
 
+/*
+MySQLStore is a session storage for a MySQL database.
+*/
 type MySQLStore struct {
 	db                *sql.DB
 	startSessionStmt  *sql.Stmt
@@ -16,7 +19,8 @@ type MySQLStore struct {
 }
 
 /*
-	Create a new session storage in the given mysql database.
+NewMySQLStore creates a MySQLStore SessionStorage using the given database and
+tablename. The table will be created if it does not exist.
 */
 func NewMySQLStore(db *sql.DB, tablename string, maxAge time.Duration) (*MySQLStore, error) {
 	var s MySQLStore
@@ -58,6 +62,7 @@ func NewMySQLStore(db *sql.DB, tablename string, maxAge time.Duration) (*MySQLSt
 	return &s, nil
 }
 
+// Close the MySQLStore
 func (s *MySQLStore) Close() error {
 	err1 := s.startSessionStmt.Close()
 	err2 := s.commitSessionStmt.Close()
@@ -79,11 +84,13 @@ func (s *MySQLStore) Close() error {
 	return nil
 }
 
+// GC one pass over the MySQLStore
 func (s *MySQLStore) GC() error {
 	_, err := s.gcSessionStmt.Exec()
 	return err
 }
 
+// Get session associated with sid.
 func (s *MySQLStore) Get(sid string) (*Session, error) {
 	var ses Session
 
@@ -100,6 +107,7 @@ func (s *MySQLStore) Get(sid string) (*Session, error) {
 	return nil, ErrNotFound
 }
 
+// Commit session back to storage.
 func (s *MySQLStore) Commit(ses *Session) error {
 	if ses.sid != "" {
 		sessionJSON, err := json.Marshal(ses.Values)
@@ -115,6 +123,7 @@ func (s *MySQLStore) Commit(ses *Session) error {
 	return nil
 }
 
+// Delete session from storage.
 func (s *MySQLStore) Delete(ses *Session) error {
 	_, err := s.delSessionStmt.Exec(ses.sid)
 	return err

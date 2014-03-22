@@ -227,6 +227,8 @@ ActionToken will return a token which can be embedded into forms to prevent
 cross site request attacks.
 */
 func (s *Session) ActionToken() string {
+	sat := s.Get("actionToken")
+	if sat != "" {
 	sat, ok := s.Get("actionToken")
 	if ok {
 		return sat
@@ -240,6 +242,8 @@ form value named "actionToken". Returns true if it's a real request.
 */
 func (s *Session) CanAct() bool {
 	at := s.req.FormValue("actionToken")
+	sat := s.Get("actionToken")
+	if sat != "" && at != "error" && at == sat {
 	sat, ok := s.Get("actionToken")
 	if ok && at != "error" && at == sat {
 		return true
@@ -257,12 +261,17 @@ func (s *Session) NewActionToken() string {
 }
 
 /*
+Get returns the session variable associated with key or an empty string if not
+found.
 Gets a session variable.  Returns "", false if session variable is not set.
 */
+func (s *Session) Get(key string) string {
 func (s *Session) Get(key string) (string, bool) {
 	s.RLock()
 	defer s.RUnlock()
 
+	val, _ := s.Values[key]
+	return val
 	val, ok := s.Values[key]
 	return val, ok
 }

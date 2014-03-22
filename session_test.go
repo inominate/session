@@ -34,6 +34,8 @@ func (m SessionTestServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	if sesVarName := req.FormValue("get"); sesVarName != "" {
 		m.t.Logf("Get %s", sesVarName)
+		val := ses.Get(sesVarName)
+		if val != "" {
 		val, ok := ses.Get(sesVarName)
 		if ok {
 			fmt.Fprintf(w, "Got: %s", val)

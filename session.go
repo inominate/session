@@ -1,5 +1,6 @@
 /*
-	Sessions Package
+Package session implements a simple session handler for use with the Go http
+package.
 */
 package session
 
@@ -14,7 +15,7 @@ import (
 )
 
 /*
-	Session Manager type, use NewSessionManager() to create
+	SessionManager type, use NewSessionManager() to create
 */
 type SessionManager struct {
 	// Set true to require Secure cookies
@@ -32,7 +33,7 @@ type SessionManager struct {
 }
 
 /*
-	Interface for storing sessions.
+	SessionStorage interface is used and required by SessionManager.
 	Sessions passed as parameters can be used concurrently.
 	All methods except Close() must be able to function concurrently.
 */
@@ -66,10 +67,14 @@ type SessionStorage interface {
 	Close() error
 }
 
+/*
+	SessionStorage implementations should return ErrNotFound when Get() finds
+	no associated session.
+*/
 var ErrNotFound = errors.New("no session found")
 
 /*
-	Sessions may be used concurrently, but should only be used in conjunction
+	Session may be used concurrently, but should only be used in conjunction
 	with a single HTTP request.
 */
 type Session struct {
@@ -87,8 +92,10 @@ type Session struct {
 }
 
 /*
-	Initialize the sessions system.
-	Will attempt to create its own sessions table if possible.
+	NewSessionManager will initialize the sessions system. Expects a previously
+	created SessionStorage and the name of the http cookie to use.
+
+	Once created, SessionManager.Secure can be set to force secure cookies.
 */
 func NewSessionManager(storage SessionStorage, cookieName string) (*SessionManager, error) {
 	var sm SessionManager

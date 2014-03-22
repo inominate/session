@@ -1,4 +1,6 @@
-/* Sessions Package */
+/*
+	Sessions Package
+*/
 package session
 
 import (

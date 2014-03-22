@@ -1,4 +1,3 @@
-/* Sessions Package */
 package session
 
 import (
@@ -17,7 +16,7 @@ type MySQLStore struct {
 }
 
 /*
-	Create a new session storage in the given mysql database
+	Create a new session storage in the given mysql database.
 */
 func NewMySQLStore(db *sql.DB, tablename string, maxAge time.Duration) (*MySQLStore, error) {
 	var s MySQLStore

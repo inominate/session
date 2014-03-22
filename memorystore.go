@@ -1,4 +1,3 @@
-/* Sessions Package */
 package session
 
 import (

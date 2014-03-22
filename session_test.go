@@ -36,8 +36,6 @@ func (m SessionTestServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		m.t.Logf("Get %s", sesVarName)
 		val := ses.Get(sesVarName)
 		if val != "" {
-		val, ok := ses.Get(sesVarName)
-		if ok {
 			fmt.Fprintf(w, "Got: %s", val)
 			m.t.Logf("Got: %s", val)
 		} else {

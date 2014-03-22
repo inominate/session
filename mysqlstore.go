@@ -87,11 +87,11 @@ func (s *MySQLStore) GC() error {
 func (s *MySQLStore) Get(sid string) (*Session, error) {
 	var ses Session
 
-	var session_json []byte
-	err := s.startSessionStmt.QueryRow(sid).Scan(&session_json)
+	var sessionJson []byte
+	err := s.startSessionStmt.QueryRow(sid).Scan(&sessionJson)
 	if err == nil {
 		ses.sid = sid
-		json.Unmarshal(session_json, &ses.Values)
+		json.Unmarshal(sessionJson, &ses.Values)
 		return &ses, nil
 	}
 	if err != sql.ErrNoRows {
@@ -102,11 +102,11 @@ func (s *MySQLStore) Get(sid string) (*Session, error) {
 
 func (s *MySQLStore) Commit(ses *Session) error {
 	if ses.sid != "" {
-		session_json, err := json.Marshal(ses.Values)
+		sessionJson, err := json.Marshal(ses.Values)
 		if err != nil {
 			return err
 		}
-		_, err = s.commitSessionStmt.Exec(ses.sid, session_json)
+		_, err = s.commitSessionStmt.Exec(ses.sid, sessionJson)
 		if err != nil {
 			return err
 		}

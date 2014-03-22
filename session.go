@@ -14,7 +14,9 @@ import (
 	"time"
 )
 
-//	SessionManager type, use NewSessionManager() to create.
+/*
+SessionManager type, use NewSessionManager() to create.
+*/
 type SessionManager struct {
 	// Set true to require Secure cookies
 	Secure bool
@@ -156,8 +158,8 @@ func (sm *SessionManager) Close() error {
 }
 
 /*
-	SetGCDelay is used to configure time between purging expired sessions.
-	Default is every hour.
+SetGCDelay is used to configure time between purging expired sessions.
+Default is every hour.
 */
 func (sm *SessionManager) SetGCDelay(delay time.Duration) error {
 	sm.Lock()
@@ -229,23 +231,19 @@ cross site request attacks.
 func (s *Session) ActionToken() string {
 	sat := s.Get("actionToken")
 	if sat != "" {
-	sat, ok := s.Get("actionToken")
-	if ok {
 		return sat
 	}
 	return "error"
 }
 
 /*
-Checks the current action token against the token in the request. Expects a
-form value named "actionToken". Returns true if it's a real request.
+CanAct checks the current action token against the token in the request.
+Expects a form value named "actionToken". Returns true if it's a real request.
 */
 func (s *Session) CanAct() bool {
 	at := s.req.FormValue("actionToken")
 	sat := s.Get("actionToken")
 	if sat != "" && at != "error" && at == sat {
-	sat, ok := s.Get("actionToken")
-	if ok && at != "error" && at == sat {
 		return true
 	}
 	return false
@@ -263,17 +261,13 @@ func (s *Session) NewActionToken() string {
 /*
 Get returns the session variable associated with key or an empty string if not
 found.
-Gets a session variable.  Returns "", false if session variable is not set.
 */
 func (s *Session) Get(key string) string {
-func (s *Session) Get(key string) (string, bool) {
 	s.RLock()
 	defer s.RUnlock()
 
 	val, _ := s.Values[key]
 	return val
-	val, ok := s.Values[key]
-	return val, ok
 }
 
 /*

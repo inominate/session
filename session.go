@@ -14,9 +14,7 @@ import (
 	"time"
 )
 
-/*
-	SessionManager type, use NewSessionManager() to create
-*/
+//	SessionManager type, use NewSessionManager() to create.
 type SessionManager struct {
 	// Set true to require Secure cookies
 	Secure bool
@@ -33,9 +31,10 @@ type SessionManager struct {
 }
 
 /*
-	SessionStorage interface is used and required by SessionManager.
-	Sessions passed as parameters can be used concurrently.
-	All methods except Close() must be able to function concurrently.
+SessionStorage interface is used and required by SessionManager.
+
+Sessions passed as parameters can be used concurrently. All methods except
+Close() must be able to function concurrently.
 */
 type SessionStorage interface {
 	/*
@@ -50,8 +49,8 @@ type SessionStorage interface {
 	Commit(session *Session) error
 
 	/*
-		Delete a session from storage. NOP if the session isn't in storage, only
-		returns an error if something goes seriously wrong.
+		Delete a session from storage. NOP if the session isn't in storage,
+		only returns an error if something goes seriously wrong.
 	*/
 	Delete(session *Session) error
 
@@ -68,14 +67,14 @@ type SessionStorage interface {
 }
 
 /*
-	SessionStorage implementations should return ErrNotFound when Get() finds
-	no associated session.
+SessionStorage implementations should return ErrNotFound when Get() finds no
+associated session.
 */
 var ErrNotFound = errors.New("no session found")
 
 /*
-	Session may be used concurrently, but should only be used in conjunction
-	with a single HTTP request.
+Session may be used concurrently, but should only be used in conjunction with a
+single HTTP request.
 */
 type Session struct {
 	sid        string
@@ -92,10 +91,10 @@ type Session struct {
 }
 
 /*
-	NewSessionManager will initialize the sessions system. Expects a previously
-	created SessionStorage and the name of the http cookie to use.
+NewSessionManager will initialize the sessions system. Expects a previously
+created SessionStorage and the name of the http cookie to use.
 
-	Once created, SessionManager.Secure can be set to force secure cookies.
+Once created, SessionManager.Secure can be set to force secure cookies.
 */
 func NewSessionManager(storage SessionStorage, cookieName string) (*SessionManager, error) {
 	var sm SessionManager
@@ -104,7 +103,7 @@ func NewSessionManager(storage SessionStorage, cookieName string) (*SessionManag
 		return nil, errors.New("invalid cookie Name")
 	}
 
-	sm.gcDelay = time.Hour * 6
+	sm.gcDelay = time.Hour
 	sm.cookieName = cookieName
 
 	sm.storage = storage
@@ -116,8 +115,8 @@ func NewSessionManager(storage SessionStorage, cookieName string) (*SessionManag
 }
 
 /*
-	Close the session manager, ending the gc loop and doing whatever cleanup
-	the storage manager demands.
+Close the session manager, ending the gc loop and doing whatever cleanup the
+storage manager demands.
 */
 func (sm *SessionManager) Close() error {
 	sm.Lock()
@@ -157,7 +156,8 @@ func (sm *SessionManager) Close() error {
 }
 
 /*
-	Configure time between purging expired sessions
+	SetGCDelay is used to configure time between purging expired sessions.
+	Default is every hour.
 */
 func (sm *SessionManager) SetGCDelay(delay time.Duration) error {
 	sm.Lock()
@@ -188,8 +188,8 @@ func (sm *SessionManager) gc() {
 }
 
 /*
-	Returns a session, resuming an existing session if possible and creating a
-	new session if necessary.
+Begin using a session. Returns a session, resuming an existing session if
+possible and creating a	new session if necessary.
 */
 func (sm *SessionManager) Begin(w http.ResponseWriter, req *http.Request) (*Session, error) {
 	var s Session
@@ -223,8 +223,8 @@ func (sm *SessionManager) Begin(w http.ResponseWriter, req *http.Request) (*Sess
 }
 
 /*
-	Returns a token which can be embedded into forms to prevent cross site
-	request attacks.
+ActionToken will return a token which can be embedded into forms to prevent
+cross site request attacks.
 */
 func (s *Session) ActionToken() string {
 	sat, ok := s.Get("actionToken")
@@ -235,8 +235,8 @@ func (s *Session) ActionToken() string {
 }
 
 /*
-	Checks the current action token against the token in the request. Expects a
-	form value named "actionToken". Returns true if it's a real request.
+Checks the current action token against the token in the request. Expects a
+form value named "actionToken". Returns true if it's a real request.
 */
 func (s *Session) CanAct() bool {
 	at := s.req.FormValue("actionToken")
@@ -248,7 +248,8 @@ func (s *Session) CanAct() bool {
 }
 
 /*
-	Resets the action token, should be used after each action is performed.
+NewActionToken resets the action token, should be used after each checked
+action is performed.
 */
 func (s *Session) NewActionToken() string {
 	s.Set("actionToken", makeID())
@@ -256,8 +257,7 @@ func (s *Session) NewActionToken() string {
 }
 
 /*
-	Returns a session variable string.  Returns nil if session variable is not
-	set.
+Gets a session variable.  Returns "", false if session variable is not set.
 */
 func (s *Session) Get(key string) (string, bool) {
 	s.RLock()
@@ -268,7 +268,7 @@ func (s *Session) Get(key string) (string, bool) {
 }
 
 /*
-	Sets a session variable.
+Set a session variable.
 */
 func (s *Session) Set(key string, value string) {
 	s.Lock()
@@ -278,8 +278,8 @@ func (s *Session) Set(key string, value string) {
 }
 
 /*
-	Save the session state back to the storage.  Should be called at the end of
-	each request.
+Commit the session back to storage. Should be called at the end of each
+request.
 */
 func (s *Session) Commit() error {
 	s.Lock()
@@ -308,8 +308,7 @@ func (s *Session) setCookie() {
 }
 
 /*
-	Wipe existing session data leaving a new one. Call SetCookie() to inform
-	the browser of the change.
+Clear existing session data leaving a new one.
 */
 func (s *Session) Clear() {
 	s.Lock()

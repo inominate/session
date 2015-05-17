@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/gob"
 	"errors"
-	"log"
 	"time"
 
 	"github.com/boltdb/bolt"
@@ -84,7 +83,6 @@ func (s *BoltStore) GC() error {
 		return nil
 	})
 
-	log.Printf("GC Completed. %s", err)
 	return err
 }
 
@@ -158,7 +156,6 @@ func (s *BoltStore) Commit(ses *Session) error {
 		return nil
 	})
 
-	log.Printf("Session Committed. %s", err)
 	return err
 }
 
@@ -200,6 +197,5 @@ func (s *BoltStore) Delete(ses *Session) error {
 		return nil
 	})
 
-	log.Printf("Sesion Deleted. %s", err)
 	return err
 }
